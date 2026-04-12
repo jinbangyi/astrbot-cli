@@ -17,15 +17,10 @@ TODO: Add a brief project description here.
 ├── debug/                                      # Temporary debugging files ONLY
 ├── data/                                       # persistent data storage for the workspace
 ├── code-repo/                                  # Storage for cloned code repositories
-│   ├── github/                                 # Public GitHub repositories
-│   |   │── Public Github Repo1/                # Github repository, AI can create a deepresearch based on the source code
-│   |   └── Public Github Repo2/                # Github repository
-│   ├── Your Github Account/                    # code repo of your personal github account
-│   │   |── Your Personal Repo1/                # Description of your repo
-│   │   └── Your Personal Repo2/                # Description of your repo
-│   └── Your Github Org/                        # Your GitHub organization repositories
-│       │── skills/                             # Minara Skills repository
-│       └── minara-cli/                         # Minara CLI repository
+│   └── github/                                 # Public GitHub repositories
+│       ├── helloworld/                         # Example repository for AstrBot plugin development
+│       └── AstrBot/                            # AstrBot repository cloned from GitHub
+│           └── docs/en/                        # English documentation for AstrBot
 ├── docs/                                       # Project documentation
 │   ├── AI-external-context/                    # External system context for AI agents
 │   │   ├── local.md                            # Local running environment info, local env which can upload to git
