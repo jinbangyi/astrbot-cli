@@ -1,17 +1,18 @@
-"""Platform settings management utilities for AstrBot CLI."""
+"""Configuration management utilities for AstrBot CLI."""
 
 import json
 from pathlib import Path
+from typing import Any
 
-from .path_config import get_cmd_config_path
+from .path_config import get_cmd_config_path, get_astrbot_root
 
-# Default platform settings
-DEFAULT_PLATFORM_SETTINGS = {
+# Default configuration settings
+DEFAULT_CONFIG = {
     "unique_session": False,
     "rate_limit": {
         "time": 60,
         "count": 30,
-        "strategy": "stall",  # stall, discard
+        "strategy": "stall",
     },
     "reply_prefix": "",
     "forward_threshold": 1500,
@@ -43,12 +44,11 @@ DEFAULT_PLATFORM_SETTINGS = {
     "ignore_at_all": False,
 }
 
-# Settings schema with descriptions
-SETTINGS_SCHEMA = {
+# Configuration schema with descriptions
+CONFIG_SCHEMA = {
     "unique_session": {
         "type": "bool",
         "description": "Enable unique session mode (one conversation per user)",
-        "hint": "When enabled, each user gets their own conversation context",
     },
     "rate_limit": {
         "type": "object",
@@ -62,86 +62,34 @@ SETTINGS_SCHEMA = {
     "reply_prefix": {
         "type": "string",
         "description": "Prefix to add to all bot replies",
-        "hint": "e.g., '[Bot] ' or empty for none",
     },
     "forward_threshold": {
         "type": "int",
         "description": "Character threshold for message forwarding",
-        "hint": "Messages longer than this will be forwarded",
     },
     "enable_id_white_list": {
         "type": "bool",
         "description": "Enable ID whitelist for access control",
-        "hint": "When enabled, only whitelisted users can use the bot",
     },
     "id_whitelist": {
         "type": "list",
         "description": "List of user/group IDs allowed to use the bot",
-        "hint": "Add user IDs or group IDs here",
-    },
-    "id_whitelist_log": {
-        "type": "bool",
-        "description": "Log blocked attempts from non-whitelisted users",
-    },
-    "wl_ignore_admin_on_group": {
-        "type": "bool",
-        "description": "Ignore whitelist for admins in group chats",
-    },
-    "wl_ignore_admin_on_friend": {
-        "type": "bool",
-        "description": "Ignore whitelist for admins in friend messages",
     },
     "reply_with_mention": {
         "type": "bool",
         "description": "Mention user when replying",
-        "hint": "Bot will @ mention the user in replies",
     },
     "reply_with_quote": {
         "type": "bool",
         "description": "Quote original message when replying",
-    },
-    "path_mapping": {
-        "type": "list",
-        "description": "Path mapping for file access",
-        "hint": "List of [from_path, to_path] mappings",
     },
     "segmented_reply": {
         "type": "object",
         "description": "Segmented/streaming reply settings",
         "fields": {
             "enable": {"type": "bool", "description": "Enable segmented replies"},
-            "only_llm_result": {"type": "bool", "description": "Only segment LLM responses"},
             "interval_method": {"type": "string", "options": ["random", "fixed"], "description": "Interval calculation method"},
-            "interval": {"type": "string", "description": "Interval range (e.g., '1.5,3.5')"},
-            "words_count_threshold": {"type": "int", "description": "Minimum words to trigger segmentation"},
-            "split_mode": {"type": "string", "options": ["regex", "words"], "description": "How to split messages"},
-            "regex": {"type": "string", "description": "Regex pattern for splitting"},
         },
-    },
-    "no_permission_reply": {
-        "type": "bool",
-        "description": "Reply when user has no permission",
-    },
-    "empty_mention_waiting": {
-        "type": "bool",
-        "description": "Wait for content after empty @mention",
-    },
-    "empty_mention_waiting_need_reply": {
-        "type": "bool",
-        "description": "Send a reply while waiting for content",
-    },
-    "friend_message_needs_wake_prefix": {
-        "type": "bool",
-        "description": "Require wake prefix for friend messages",
-        "hint": "When disabled, all friend messages will trigger the bot",
-    },
-    "ignore_bot_self_message": {
-        "type": "bool",
-        "description": "Ignore messages from the bot itself",
-    },
-    "ignore_at_all": {
-        "type": "bool",
-        "description": "Ignore @all mentions",
     },
 }
 
@@ -151,19 +99,28 @@ def get_config_path() -> Path:
     return get_cmd_config_path()
 
 
+def get_shared_preferences_path() -> Path:
+    """Get the shared preferences file path."""
+    astrbot_root = get_astrbot_root()
+    if astrbot_root:
+        return astrbot_root / "data" / "shared_preferences.json"
+    return Path.cwd() / "data" / "shared_preferences.json"
+
+
 def load_config() -> dict:
     """Load AstrBot configuration.
 
     Returns:
         dict: Configuration dictionary
+
     """
     config_path = get_config_path()
     if config_path.exists():
         try:
             return json.loads(config_path.read_text(encoding="utf-8"))
         except json.JSONDecodeError:
-            return {"platform": [], "provider": [], "provider_settings": {}, "platform_settings": DEFAULT_PLATFORM_SETTINGS}
-    return {"platform": [], "provider": [], "provider_settings": {}, "platform_settings": DEFAULT_PLATFORM_SETTINGS}
+            return {"platform": [], "provider": [], "provider_settings": {}, "platform_settings": DEFAULT_CONFIG.copy()}
+    return {"platform": [], "provider": [], "provider_settings": {}, "platform_settings": DEFAULT_CONFIG.copy()}
 
 
 def save_config(config: dict) -> None:
@@ -171,39 +128,40 @@ def save_config(config: dict) -> None:
 
     Args:
         config: Configuration dictionary to save
+
     """
     config_path = get_config_path()
     config_path.parent.mkdir(parents=True, exist_ok=True)
     config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8")
 
 
-def get_platform_settings() -> dict:
-    """Get platform settings.
+def get_settings() -> dict:
+    """Get all settings (platform_settings from config).
 
     Returns:
-        dict: Platform settings dictionary
+        dict: Settings dictionary merged with defaults
+
     """
     config = load_config()
     settings = config.get("platform_settings", {})
-    # Merge with defaults for missing keys
-    result = DEFAULT_PLATFORM_SETTINGS.copy()
+    result = DEFAULT_CONFIG.copy()
     result.update(settings)
     return result
 
 
-def update_platform_settings(updates: dict) -> dict:
-    """Update platform settings.
+def update_settings(updates: dict) -> dict:
+    """Update settings.
 
     Args:
         updates: Dictionary of settings to update
 
     Returns:
-        Updated platform settings dictionary
+        Updated settings dictionary
+
     """
     config = load_config()
-    current = config.get("platform_settings", DEFAULT_PLATFORM_SETTINGS.copy())
+    current = config.get("platform_settings", DEFAULT_CONFIG.copy())
 
-    # Deep merge for nested dicts
     def deep_merge(base: dict, update: dict) -> dict:
         result = base.copy()
         for key, value in update.items():
@@ -219,14 +177,15 @@ def update_platform_settings(updates: dict) -> dict:
     return updated
 
 
-def reset_platform_settings() -> dict:
-    """Reset platform settings to defaults.
+def reset_settings() -> dict:
+    """Reset settings to defaults.
 
     Returns:
-        Default platform settings dictionary
+        Default settings dictionary
+
     """
     config = load_config()
-    config["platform_settings"] = DEFAULT_PLATFORM_SETTINGS.copy()
+    config["platform_settings"] = DEFAULT_CONFIG.copy()
     save_config(config)
     return config["platform_settings"]
 
@@ -236,5 +195,78 @@ def get_settings_schema() -> dict:
 
     Returns:
         Settings schema dictionary
+
     """
-    return SETTINGS_SCHEMA
+    return CONFIG_SCHEMA
+
+
+def get_setting(key: str) -> Any:
+    """Get a specific setting value.
+
+    Args:
+        key: Setting key (supports dot notation for nested keys)
+
+    Returns:
+        Setting value or None if not found
+
+    """
+    settings = get_settings()
+    keys = key.split(".")
+    value = settings
+    for k in keys:
+        if isinstance(value, dict):
+            value = value.get(k)
+        else:
+            return None
+    return value
+
+
+def set_setting(key: str, value: Any) -> None:
+    """Set a specific setting value.
+
+    Args:
+        key: Setting key (supports dot notation for nested keys)
+        value: Value to set
+
+    """
+    keys = key.split(".")
+
+    if len(keys) == 1:
+        update_settings({key: value})
+    else:
+        # Build nested dict update
+        updates = {}
+        current = updates
+        for k in keys[:-1]:
+            current[k] = {}
+            current = current[k]
+        current[keys[-1]] = value
+        update_settings(updates)
+
+
+def load_shared_preferences() -> dict:
+    """Load shared preferences.
+
+    Returns:
+        dict: Shared preferences dictionary
+
+    """
+    prefs_path = get_shared_preferences_path()
+    if prefs_path.exists():
+        try:
+            return json.loads(prefs_path.read_text(encoding="utf-8"))
+        except json.JSONDecodeError:
+            return {}
+    return {}
+
+
+def save_shared_preferences(prefs: dict) -> None:
+    """Save shared preferences.
+
+    Args:
+        prefs: Shared preferences dictionary to save
+
+    """
+    prefs_path = get_shared_preferences_path()
+    prefs_path.parent.mkdir(parents=True, exist_ok=True)
+    prefs_path.write_text(json.dumps(prefs, indent=2, ensure_ascii=False), encoding="utf-8")

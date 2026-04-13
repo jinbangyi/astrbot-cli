@@ -1,4 +1,4 @@
-"""Platform management CLI commands for AstrBot."""
+"""Bot management CLI commands for AstrBot."""
 
 import json
 import os
@@ -9,39 +9,39 @@ from typing import Annotated
 
 import tyro
 
-from .platform_utils import (
-    get_available_platforms,
-    get_platform_config,
-    get_platform_config_schema,
-    set_platform_config,
-    list_platform_configs,
-    add_platform_config,
-    update_platform_config,
-    delete_platform_config,
+from .bots_utils import (
+    get_available_bots,
+    get_bot_config,
+    get_bot_config_schema,
+    set_bot_config,
+    list_bot_configs,
+    add_bot_config,
+    update_bot_config,
+    delete_bot_config,
 )
 
 
 @dataclass
-class PlatformList:
-    """List platform configurations.
+class List:
+    """List bot configurations.
 
-    Show configured platforms. Use --available to see all supported platform types.
+    Show configured bots. Use --available to see all supported bot types.
     """
 
-    available: bool = False  # Show all available platform types
+    available: bool = False  # Show all available bot types
 
     def run(self) -> None:
         """Execute the list command."""
         if self.available:
-            platforms = get_available_platforms()
-            print("\nAvailable Platform Types:")
+            bots = get_available_bots()
+            print("\nAvailable Bot Types:")
             print("-" * 60)
-            for platform in platforms:
-                print(f"  {platform['name']:<20} {platform['desc']}")
+            for bot in bots:
+                print(f"  {bot['name']:<20} {bot['desc']}")
         else:
-            configs = list_platform_configs()
+            configs = list_bot_configs()
             if configs:
-                print("\nConfigured Platforms:")
+                print("\nConfigured Bots:")
                 print("-" * 80)
                 print(f"{'ID':<20} {'Type':<15} {'Enabled':<10} {'Description':<30}")
                 print("-" * 80)
@@ -50,110 +50,109 @@ class PlatformList:
                     desc = config.get("desc", "")[:28]
                     print(f"{config.get('id', ''):<20} {config.get('type', ''):<15} {enabled:<10} {desc}")
             else:
-                print("No platforms configured. Use 'platform add' to add one.")
+                print("No bots configured. Use 'bots add' to add one.")
 
 
 @dataclass
 class Add:
-    """Add a new platform configuration.
+    """Add a new bot configuration.
 
-    Create a new platform configuration with the specified type.
+    Create a new bot configuration with the specified type.
     """
 
-    type: Annotated[str, tyro.conf.Positional]  # Platform type (e.g., telegram, discord, aiocqhttp)
-    id: str | None = None  # Platform instance ID (defaults to type name)
-    enable: bool = True  # Enable the platform immediately
+    type: Annotated[str, tyro.conf.Positional]  # Bot type (e.g., telegram, discord, aiocqhttp)
+    id: str | None = None  # Bot instance ID (defaults to type name)
+    enable: bool = True  # Enable the bot immediately
 
     def run(self) -> None:
         """Execute the add command."""
         try:
-            platform_id = self.id or self.type
-            config = add_platform_config(self.type, platform_id, self.enable)
-            print(f"\nPlatform '{platform_id}' added successfully!")
+            bot_id = self.id or self.type
+            config = add_bot_config(self.type, bot_id, self.enable)
+            print(f"\nBot '{bot_id}' added successfully!")
             print(f"  Type: {self.type}")
             print(f"  Enabled: {self.enable}")
-            print(f"\nConfigure with: python main.py platforms config {platform_id}")
+            print(f"\nConfigure with: astrbot-cli bots config {bot_id}")
         except ValueError as e:
             print(f"Error: {e}")
 
 
 @dataclass
 class Remove:
-    """Remove a platform configuration.
+    """Remove a bot configuration.
 
-    Delete a platform configuration by its ID.
+    Delete a bot configuration by its ID.
     """
 
-    id: Annotated[str, tyro.conf.Positional]  # Platform instance ID to remove
+    id: Annotated[str, tyro.conf.Positional]  # Bot instance ID to remove
 
     def run(self) -> None:
         """Execute the remove command."""
         try:
-            delete_platform_config(self.id)
-            print(f"Platform '{self.id}' has been removed")
+            delete_bot_config(self.id)
+            print(f"Bot '{self.id}' has been removed")
         except ValueError as e:
             print(f"Error: {e}")
 
 
 @dataclass
 class Enable:
-    """Enable a platform.
+    """Enable a bot.
 
-    Enable a disabled platform by its ID.
+    Enable a disabled bot by its ID.
     """
 
-    id: Annotated[str, tyro.conf.Positional]  # Platform instance ID to enable
+    id: Annotated[str, tyro.conf.Positional]  # Bot instance ID to enable
 
     def run(self) -> None:
         """Execute the enable command."""
         try:
-            update_platform_config(self.id, {"enable": True})
-            print(f"Platform '{self.id}' has been enabled")
+            update_bot_config(self.id, {"enable": True})
+            print(f"Bot '{self.id}' has been enabled")
         except ValueError as e:
             print(f"Error: {e}")
 
 
 @dataclass
 class Disable:
-    """Disable a platform.
+    """Disable a bot.
 
-    Disable an enabled platform by its ID.
+    Disable an enabled bot by its ID.
     """
 
-    id: Annotated[str, tyro.conf.Positional]  # Platform instance ID to disable
+    id: Annotated[str, tyro.conf.Positional]  # Bot instance ID to disable
 
     def run(self) -> None:
         """Execute the disable command."""
         try:
-            update_platform_config(self.id, {"enable": False})
-            print(f"Platform '{self.id}' has been disabled")
+            update_bot_config(self.id, {"enable": False})
+            print(f"Bot '{self.id}' has been disabled")
         except ValueError as e:
             print(f"Error: {e}")
 
 
 @dataclass
 class Config:
-    """Configure a platform.
+    """Configure a bot.
 
-    View or edit platform configuration.
+    View or edit bot configuration.
     """
 
-    id: Annotated[str, tyro.conf.Positional]  # Platform instance ID
+    id: Annotated[str, tyro.conf.Positional]  # Bot instance ID
     edit: bool = False  # Open config in editor
     set: str | None = None  # Set a config value (format: key=value)
     get: str | None = None  # Get a config value
 
     def run(self) -> None:
         """Execute the config command."""
-        config = get_platform_config(self.id)
+        config = get_bot_config(self.id)
         if config is None:
-            print(f"Error: Platform '{self.id}' not found")
+            print(f"Error: Bot '{self.id}' not found")
             return
 
-        schema = get_platform_config_schema(config.get("type", ""))
+        schema = get_bot_config_schema(config.get("type", ""))
 
         if self.get:
-            # Get a specific config value
             keys = self.get.split(".")
             value = config
             for key in keys:
@@ -171,7 +170,6 @@ class Config:
                 print(f"Config key '{self.get}' not found")
 
         elif self.set:
-            # Set a config value
             if "=" not in self.set:
                 print("Error: --set requires format 'key=value'")
                 return
@@ -179,26 +177,23 @@ class Config:
             key, value = self.set.split("=", 1)
             keys = key.split(".")
 
-            # Navigate to the right nested dict
             current = config
             for k in keys[:-1]:
                 if k not in current:
                     current[k] = {}
                 current = current[k]
 
-            # Try to parse value as JSON, otherwise treat as string
             try:
                 parsed = json.loads(value)
             except json.JSONDecodeError:
                 parsed = value
 
             current[keys[-1]] = parsed
-            set_platform_config(self.id, config)
+            set_bot_config(self.id, config)
             print(f"Set {key} = {parsed}")
 
         elif self.edit:
-            # Open in editor
-            config_path = Path.home() / ".config" / "astrbot" / "platforms" / f"{self.id}_config.json"
+            config_path = Path.home() / ".config" / "astrbot" / "bots" / f"{self.id}_config.json"
             config_path.parent.mkdir(parents=True, exist_ok=True)
 
             if not config_path.exists():
@@ -207,16 +202,14 @@ class Config:
             editor = os.environ.get("EDITOR", "nano")
             subprocess.run([editor, str(config_path)])
 
-            # Read back the edited config
             try:
                 new_config = json.loads(config_path.read_text(encoding="utf-8"))
-                set_platform_config(self.id, new_config)
+                set_bot_config(self.id, new_config)
                 print("Configuration saved")
             except json.JSONDecodeError as e:
                 print(f"Error: Invalid JSON in config file: {e}")
 
         else:
-            # Display current config
             print(f"\nConfiguration for '{self.id}':")
             print(f"  Type: {config.get('type', 'unknown')}")
             print(f"  Enabled: {config.get('enable', False)}")
@@ -227,16 +220,12 @@ class Config:
                     if key in ["type", "id", "enable"]:
                         continue
                     default = info.get("default", "required")
-                    desc = info.get("description", info.get("desc", ""))
-                    hint = info.get("hint", "")
+                    desc = info.get("description", "")
                     print(f"  {key}: {desc}")
-                    if hint:
-                        print(f"    Hint: {hint}")
                     print(f"    Default: {default}")
                     print()
 
             print("Current configuration:")
-            # Hide sensitive fields
             display_config = config.copy()
             for key in ["token", "key", "secret", "password", "access_token"]:
                 if key in display_config:
@@ -246,27 +235,26 @@ class Config:
 
 @dataclass
 class Info:
-    """Show detailed information about a platform.
+    """Show detailed information about a bot.
 
-    Display platform configuration and status.
+    Display bot configuration and status.
     """
 
-    id: Annotated[str, tyro.conf.Positional]  # Platform instance ID
+    id: Annotated[str, tyro.conf.Positional]  # Bot instance ID
 
     def run(self) -> None:
         """Execute the info command."""
-        config = get_platform_config(self.id)
+        config = get_bot_config(self.id)
         if config is None:
-            print(f"Error: Platform '{self.id}' not found")
+            print(f"Error: Bot '{self.id}' not found")
             return
 
         print(f"\n{'=' * 50}")
-        print(f"Platform: {self.id}")
+        print(f"Bot: {self.id}")
         print(f"{'=' * 50}")
         print(f"Type: {config.get('type', 'unknown')}")
         print(f"Enabled: {config.get('enable', False)}")
 
-        # Show other config keys (hiding sensitive ones)
         other_keys = [k for k in config.keys() if k not in ["id", "type", "enable", "desc"]]
         if other_keys:
             print(f"\nConfiguration:")
@@ -279,20 +267,3 @@ class Info:
                         print(f"  {key}: {json.dumps(value)}")
                     else:
                         print(f"  {key}: {value}")
-
-
-# Union type for subcommands
-Commands = Annotated[
-    PlatformList | Add | Remove | Enable | Disable | Config | Info,
-    tyro.conf.subcommand(),
-]
-
-
-def run_platform_command(cmd: PlatformList | Add | Remove | Enable | Disable | Config | Info) -> None:
-    """Run a platform command based on its type.
-
-    Args:
-        cmd: The platform command to execute
-
-    """
-    cmd.run()

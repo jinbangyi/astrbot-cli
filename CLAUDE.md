@@ -44,16 +44,23 @@ The CLI provides two complementary execution models:
 │   ├── cli.py                                  # CLI entry point with Typer commands
 │   ├── __init__.py                             # Package initialization
 │   └── src/                                    # Source modules
-│       ├── path_config.py                      # Path configuration utilities
-│       ├── platform.py                         # Platform management commands
-│       ├── platform_settings.py                # Platform settings commands
-│       ├── platform_settings_utils.py          # Platform settings utilities
-│       ├── platform_utils.py                   # Platform management utilities
-│       ├── plugin.py                           # Plugin management commands
-│       ├── plugin_utils.py                     # Plugin management utilities
-│       ├── quick_start.py                      # Quick start functionality
-│       ├── utils.py                            # General utilities
-│       └── example.md                          # Example documentation
+|       ├── bots.py                             # Bot management commands
+|       ├── bots_utils.py                       # Botutilities          
+|       ├── config.py                           # Config commands        
+|       ├── config_utils.py                     # Config utilities       
+|       ├── personas.py                         # Persona commands       
+|       ├── personas_utils.py                   # Persona utilities (SQLite)
+|       ├── profiles.py                         # Profile commands       
+|       ├── profiles_utils.py                   # Profile utilities (new profiles.json)
+|       ├── providers.py                        # Provider commands      
+|       ├── providers_utils.py                  # Provider utilities     
+|       ├── workflows.py                        # Workflow commands      
+|       ├── workflows_utils.py                  # Dagu integration       
+|       ├── plugin.py                           # Plugin commands (kept) 
+|       ├── plugin_utils.py                     # Plugin utilities (kept)
+|       ├── quick_start.py                      # Quick start (kept)     
+|       ├── path_config.py                      # Path management (kept) 
+|       └── utils.py                            # General utilities (kept)
 ├── code-repo/                                  # Storage for cloned code repositories
 │   └── github/                                 # Public GitHub repositories
 │       ├── helloworld/                         # AstrBot example plugin repository
@@ -66,6 +73,7 @@ The CLI provides two complementary execution models:
 │   ├── development/                            # Date-based development plans (YY-MM-DD/)
 │   ├── requirements/                           # Requirements documentation
 │   ├── rules/                                  # Repository rules and guidelines
+│   │   └── project.md                          # Project rules and guidelines (this file)
 │   ├── user-guide/                             # User guides and manuals
 │   └── TODO.md                                 # Active TODO list (unfinished tasks only)
 ├── scripts/                                    # Repository scripts
@@ -81,28 +89,6 @@ The CLI provides two complementary execution models:
 ├── README.md                                   # Project README file
 └── uv.lock                                     # Python dependency lock file
 ```
-
-## Development Workflow
-
-### Date-Based Organization
-
-- Development notes: `docs/development/YY-MM-DD/`
-- AI summaries: `.ai/summaries/YY-MM-DD/`
-- Use this format for all new development work
-
-### Context Sources (in priority order)
-
-1. `docs/development/` - Current plans and architecture
-2. `docs/TODO.md` - Pending work
-3. `.ai/summaries/` - Past AI work and decisions
-4. `docs/AI-external-context/` - External system context
-
-### File Organization Rules
-
-- All source code → `src/`
-- All scripts → `scripts/`
-- Temporary debugging → `debug/` (never commit this)
-- Documentation → `docs/development/YY-MM-DD/`
 
 ## Important Notes
 
