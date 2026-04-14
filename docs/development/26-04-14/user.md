@@ -1,0 +1,12 @@
+- [x] fix: 'astrbot-cli bots config discord --set token=MTA5O', when user use the command like this, only the field valid will be set(the key name in the configuration and the key value pass the validation). all other command is the same
+- [x] feat: add a msg send command for bot, so that i user can use astrbot-cli to send a msg to a channel/group/user
+- [x] feat: the 'astrbot-cli bots config' should include a option to show config schema include what the field name, field type and field description, so that user can know what field they can set and what value they should set
+- [x] feat: the astrbot-cli should include a command to get recent msg from the channel/group/user through the bot (NOTE: currently only supports AstrBot internal session history, not direct platform channel fetch)
+- [x] feat: add support for fetching messages directly from external platforms (Discord) via platform API
+  - Implemented `astrbot-cli bots fetch discord` command
+  - Discord: Full support via Discord REST API (requires bot token)
+  - Telegram: Not supported (Bot API limitation - use session storage instead)
+- [x] feat: user can config the apikey of the astrbot in ~/.config/astrbot-cli/config.yaml, so that if no apikey pass for a command has apikey option, the astrbot-cli will use the apikey in the config file
+  - Config file location: ~/.config/astrbot-cli/config.yaml
+  - Set API key: `astrbot-cli system path --api-key YOUR_KEY`
+  - API key is used as fallback for bots send and bots messages commands

@@ -32,6 +32,7 @@ from .utils import (
 )
 from .path_config import (
     set_astrbot_path,
+    set_api_key,
     get_astrbot_path,
     load_cli_config,
     print_current_path,
@@ -410,9 +411,15 @@ class QuickStart:
 
 @dataclass
 class Path:
-    """Show or set the AstrBot installation path."""
+    """Show or set the AstrBot installation path and API key.
+
+    The API key is used for AstrBot OpenAPI authentication.
+    It is stored in ~/.config/astrbot-cli/config.yaml and used as
+    a fallback when commands don't have an explicit --api-key option.
+    """
     set: Path | None = None  # Set a new AstrBot path
     force: bool = False  # Force set even if AstrBot not installed at path
+    api_key: str | None = None  # Set the default API key for AstrBot OpenAPI
 
     def run(self) -> None:
         """Execute the path command."""
@@ -424,5 +431,8 @@ class Path:
                 print(f"❌ AstrBot not found at: {self.set}")
                 print("   Use --force to set this path anyway.")
                 sys.exit(1)
+        elif self.api_key:
+            set_api_key(self.api_key)
+            print(f"✅ API key saved to ~/.config/astrbot-cli/config.yaml")
         else:
             print_current_path()

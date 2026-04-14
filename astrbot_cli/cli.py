@@ -5,7 +5,7 @@ import sys
 import tyro
 
 from .src.plugin import Install, Uninstall, Update, PluginList, Search, Config as PluginConfig, Info as PluginInfo
-from .src.bots import List as BotList, Add as BotAdd, Remove as BotRemove, Enable as BotEnable, Disable as BotDisable, Config as BotConfig, Info as BotInfo
+from .src.bots import List as BotList, Add as BotAdd, Remove as BotRemove, Enable as BotEnable, Disable as BotDisable, Config as BotConfig, Info as BotInfo, Send as BotSend, Messages as BotMessages, FetchMessages as BotFetchMessages
 from .src.profiles import List as ProfileList, Create as ProfileCreate, Delete as ProfileDelete, Show as ProfileShow, Set as ProfileSet, Use as ProfileUse
 from .src.providers import List as ProviderList, Add as ProviderAdd, Remove as ProviderRemove, Enable as ProviderEnable, Disable as ProviderDisable, Config as ProviderConfig, Info as ProviderInfo
 from .src.personas import List as PersonaList, Create as PersonaCreate, Edit as PersonaEdit, Delete as PersonaDelete, Show as PersonaShow
@@ -44,6 +44,11 @@ Commands:
     config            Configure global settings
     workflows         Manage stateful workflows (dagu)
 
+Configuration:
+    Config file: ~/.config/astrbot-cli/config.yaml
+    Set API key: astrbot-cli system path --api-key YOUR_KEY
+    The API key is used as fallback for commands that need authentication.
+
 System Commands:
     astrbot-cli system init                 Initialize AstrBot environment
     astrbot-cli system upgrade              Upgrade AstrBot installation
@@ -54,8 +59,9 @@ System Commands:
     astrbot-cli system logs [lines]         View service logs
     astrbot-cli system info                 Show AstrBot information
     astrbot-cli system version              Show AstrBot version
-    astrbot-cli system path                 Show current AstrBot path
+    astrbot-cli system path                 Show current AstrBot path and API key status
     astrbot-cli system path --set <path>    Set AstrBot path manually
+    astrbot-cli system path --api-key <key> Set default API key for AstrBot OpenAPI
     astrbot-cli system quick-start          Quick start AstrBot (uses saved/default path)
     astrbot-cli system quick-start --path /my/path    Start at specific path
     astrbot-cli system quick-start --force  Force reinstall
@@ -69,6 +75,10 @@ Bot Commands:
     astrbot-cli bots disable <id>      Disable a bot
     astrbot-cli bots config <id>       Configure a bot
     astrbot-cli bots info <id>         Show bot info
+    astrbot-cli bots send <bot_id> <message> --umo <target>  Send a message
+    astrbot-cli bots messages --list   List available chat sessions
+    astrbot-cli bots messages <session_id>  Get recent messages from a session
+    astrbot-cli bots fetch discord --channel <id>  Fetch messages directly from Discord
 
 Profile Commands:
     astrbot-cli profiles list                    List all profiles
@@ -149,7 +159,7 @@ def main() -> None:
     if subcommand == "bots":
         if len(sys.argv) < 3:
             print("Usage: astrbot-cli bots <command>")
-            print("Commands: list, add, remove, enable, disable, config, info")
+            print("Commands: list, add, remove, enable, disable, config, info, send, messages, fetch")
             return
 
         bot_cmd = sys.argv[2]
@@ -176,9 +186,18 @@ def main() -> None:
         elif bot_cmd == "info":
             args = tyro.cli(BotInfo, args=cmd_args)
             args.run()
+        elif bot_cmd == "send":
+            args = tyro.cli(BotSend, args=cmd_args)
+            args.run()
+        elif bot_cmd == "messages":
+            args = tyro.cli(BotMessages, args=cmd_args)
+            args.run()
+        elif bot_cmd == "fetch":
+            args = tyro.cli(BotFetchMessages, args=cmd_args)
+            args.run()
         else:
             print(f"Unknown bot command: {bot_cmd}")
-            print("Commands: list, add, remove, enable, disable, config, info")
+            print("Commands: list, add, remove, enable, disable, config, info, send, messages, fetch")
 
     # Profile subcommands
     elif subcommand == "profiles":

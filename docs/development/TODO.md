@@ -1,1 +1,2 @@
 - [ ] use dagu as the workflow engine, the cli as multi grouped actions
+- [ ] should define schema in class, and use it to validate the input, and can output the schema to the cli

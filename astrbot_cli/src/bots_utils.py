@@ -46,10 +46,13 @@ def load_config() -> dict:
     config_path = get_config_path()
     if config_path.exists():
         try:
-            return json.loads(config_path.read_text(encoding="utf-8"))
+            # Use utf-8-sig to handle BOM if present
+            return json.loads(config_path.read_text(encoding="utf-8-sig"))
         except json.JSONDecodeError:
-            return {"platform": [], "provider": [], "provider_settings": {}}
-    return {"platform": [], "provider": [], "provider_settings": {}}
+            # Return empty dict if JSON is invalid
+            return {}
+    # Return empty dict - preserves existing keys when saving
+    return {}
 
 
 def save_config(config: dict) -> None:
@@ -416,17 +419,663 @@ def get_bot_config_schema(bot_type: str) -> dict | None:
     """
     schemas = {
         "telegram": {
-            "token": {"type": "string", "description": "Telegram Bot Token", "required": True},
-            "telegram_api_base_url": {"type": "string", "description": "Telegram API base URL", "default": "https://api.telegram.org/bot"},
+            "token": {
+                "type": "string",
+                "description": "Telegram Bot Token (from @BotFather)",
+                "required": True,
+            },
+            "telegram_api_base_url": {
+                "type": "string",
+                "description": "Telegram API base URL (for custom API endpoints)",
+                "default": "https://api.telegram.org/bot",
+            },
+            "telegram_file_base_url": {
+                "type": "string",
+                "description": "Telegram File API base URL",
+                "default": "https://api.telegram.org/file/bot",
+            },
+            "telegram_command_register": {
+                "type": "bool",
+                "description": "Register bot commands with Telegram",
+                "default": True,
+            },
+            "telegram_command_auto_refresh": {
+                "type": "bool",
+                "description": "Auto-refresh command registration",
+                "default": False,
+            },
+            "telegram_command_register_interval": {
+                "type": "int",
+                "description": "Command registration refresh interval (seconds)",
+                "default": 300,
+            },
+            "telegram_polling_restart_delay": {
+                "type": "float",
+                "description": "Delay before restarting polling after failure (seconds)",
+                "default": 5.0,
+            },
         },
         "discord": {
-            "discord_token": {"type": "string", "description": "Discord Bot Token", "required": True},
-            "discord_proxy": {"type": "string", "description": "Proxy URL for Discord API", "default": ""},
+            "discord_token": {
+                "type": "string",
+                "description": "Discord Bot Token (from Discord Developer Portal)",
+                "required": True,
+            },
+            "discord_proxy": {
+                "type": "string",
+                "description": "Proxy URL for Discord API (optional)",
+                "default": "",
+            },
+            "discord_command_register": {
+                "type": "bool",
+                "description": "Register slash commands with Discord",
+                "default": True,
+            },
+            "discord_activity_name": {
+                "type": "string",
+                "description": "Bot activity status text",
+                "default": "",
+            },
+            "discord_allow_bot_messages": {
+                "type": "bool",
+                "description": "Allow bot to respond to other bots",
+                "default": False,
+            },
         },
         "aiocqhttp": {
-            "ws_reverse_host": {"type": "string", "description": "WebSocket reverse host", "default": "0.0.0.0"},
-            "ws_reverse_port": {"type": "int", "description": "WebSocket reverse port", "default": 6199},
-            "ws_reverse_token": {"type": "string", "description": "WebSocket reverse access token", "default": ""},
+            "ws_reverse_host": {
+                "type": "string",
+                "description": "WebSocket reverse server host",
+                "default": "0.0.0.0",
+            },
+            "ws_reverse_port": {
+                "type": "int",
+                "description": "WebSocket reverse server port",
+                "default": 6199,
+            },
+            "ws_reverse_token": {
+                "type": "string",
+                "description": "WebSocket reverse access token (for authentication)",
+                "default": "",
+            },
+        },
+        "slack": {
+            "bot_token": {
+                "type": "string",
+                "description": "Slack Bot User OAuth Token (xoxb-...)",
+                "required": True,
+            },
+            "app_token": {
+                "type": "string",
+                "description": "Slack App-Level Token (xapp-...)",
+                "required": True,
+            },
+            "signing_secret": {
+                "type": "string",
+                "description": "Slack Signing Secret",
+                "default": "",
+            },
+            "slack_connection_mode": {
+                "type": "string",
+                "description": "Connection mode: 'socket' or 'webhook'",
+                "default": "socket",
+            },
+            "unified_webhook_mode": {
+                "type": "bool",
+                "description": "Use unified webhook mode",
+                "default": True,
+            },
+            "webhook_uuid": {
+                "type": "string",
+                "description": "Webhook UUID for unified mode",
+                "default": "",
+            },
+            "slack_webhook_host": {
+                "type": "string",
+                "description": "Webhook server host",
+                "default": "0.0.0.0",
+            },
+            "slack_webhook_port": {
+                "type": "int",
+                "description": "Webhook server port",
+                "default": 6197,
+            },
+            "slack_webhook_path": {
+                "type": "string",
+                "description": "Webhook callback path",
+                "default": "/astrbot-slack-webhook/callback",
+            },
+        },
+        "kook": {
+            "kook_bot_token": {
+                "type": "string",
+                "description": "KOOK Bot Token (from KOOK Developer Portal)",
+                "required": True,
+            },
+            "kook_reconnect_delay": {
+                "type": "int",
+                "description": "Initial reconnect delay (seconds)",
+                "default": 5,
+            },
+            "kook_max_reconnect_delay": {
+                "type": "int",
+                "description": "Maximum reconnect delay (seconds)",
+                "default": 300,
+            },
+            "kook_max_retry_delay": {
+                "type": "int",
+                "description": "Maximum retry delay (seconds)",
+                "default": 60,
+            },
+            "kook_heartbeat_interval": {
+                "type": "int",
+                "description": "Heartbeat interval (seconds)",
+                "default": 30,
+            },
+            "kook_heartbeat_timeout": {
+                "type": "int",
+                "description": "Heartbeat timeout (seconds)",
+                "default": 60,
+            },
+            "kook_max_heartbeat_failures": {
+                "type": "int",
+                "description": "Maximum consecutive heartbeat failures",
+                "default": 3,
+            },
+            "kook_max_consecutive_failures": {
+                "type": "int",
+                "description": "Maximum consecutive failures before reconnect",
+                "default": 10,
+            },
+        },
+        "lark": {
+            "lark_app_id": {
+                "type": "string",
+                "description": "Lark/Feishu App ID",
+                "required": True,
+            },
+            "lark_app_secret": {
+                "type": "string",
+                "description": "Lark/Feishu App Secret",
+                "required": True,
+            },
+            "lark_bot_name": {
+                "type": "string",
+                "description": "Bot display name",
+                "default": "",
+            },
+            "lark_encrypt_key": {
+                "type": "string",
+                "description": "Encryption key for message encryption",
+                "default": "",
+            },
+            "lark_verification_token": {
+                "type": "string",
+                "description": "Verification token for webhook",
+                "default": "",
+            },
+            "unified_webhook_mode": {
+                "type": "bool",
+                "description": "Use unified webhook mode",
+                "default": True,
+            },
+            "webhook_uuid": {
+                "type": "string",
+                "description": "Webhook UUID for unified mode",
+                "default": "",
+            },
+            "port": {
+                "type": "int",
+                "description": "Webhook server port",
+                "default": 6193,
+            },
+        },
+        "dingtalk": {
+            "dingtalk_client_id": {
+                "type": "string",
+                "description": "DingTalk Client ID (AppKey)",
+                "required": True,
+            },
+            "dingtalk_client_secret": {
+                "type": "string",
+                "description": "DingTalk Client Secret (AppSecret)",
+                "required": True,
+            },
+            "card_template_id": {
+                "type": "string",
+                "description": "Card template ID for rich messages",
+                "default": "",
+            },
+        },
+        "wecom": {
+            "corpid": {
+                "type": "string",
+                "description": "WeChat Work Corp ID",
+                "required": True,
+            },
+            "secret": {
+                "type": "string",
+                "description": "WeChat Work App Secret",
+                "required": True,
+            },
+            "token": {
+                "type": "string",
+                "description": "Token for callback verification",
+                "default": "",
+            },
+            "encoding_aes_key": {
+                "type": "string",
+                "description": "Encoding AES Key for message encryption",
+                "default": "",
+            },
+            "kf_name": {
+                "type": "string",
+                "description": "Customer Service name (for customer service mode)",
+                "default": "",
+            },
+            "api_base_url": {
+                "type": "string",
+                "description": "WeChat Work API base URL",
+                "default": "https://qyapi.weixin.qq.com/cgi-bin/",
+            },
+            "unified_webhook_mode": {
+                "type": "bool",
+                "description": "Use unified webhook mode",
+                "default": True,
+            },
+            "webhook_uuid": {
+                "type": "string",
+                "description": "Webhook UUID for unified mode",
+                "default": "",
+            },
+            "callback_server_host": {
+                "type": "string",
+                "description": "Callback server host",
+                "default": "0.0.0.0",
+            },
+            "port": {
+                "type": "int",
+                "description": "Callback server port",
+                "default": 6195,
+            },
+        },
+        "wecom_ai_bot": {
+            "wecom_ai_bot_connection_mode": {
+                "type": "string",
+                "description": "Connection mode: 'long_connection' or 'webhook'",
+                "default": "long_connection",
+            },
+            "wecom_ai_bot_name": {
+                "type": "string",
+                "description": "AI Bot name",
+                "default": "",
+            },
+            "wecomaibot_ws_bot_id": {
+                "type": "string",
+                "description": "WebSocket Bot ID",
+                "default": "",
+            },
+            "wecomaibot_ws_secret": {
+                "type": "string",
+                "description": "WebSocket Secret",
+                "default": "",
+            },
+            "wecomaibot_token": {
+                "type": "string",
+                "description": "Token for callback",
+                "default": "",
+            },
+            "wecomaibot_encoding_aes_key": {
+                "type": "string",
+                "description": "Encoding AES Key for message encryption",
+                "default": "",
+            },
+            "wecomaibot_init_respond_text": {
+                "type": "string",
+                "description": "Initial response text",
+                "default": "",
+            },
+            "wecomaibot_friend_message_welcome_text": {
+                "type": "string",
+                "description": "Welcome text for friend messages",
+                "default": "",
+            },
+            "msg_push_webhook_url": {
+                "type": "string",
+                "description": "Message push webhook URL",
+                "default": "",
+            },
+            "only_use_webhook_url_to_send": {
+                "type": "bool",
+                "description": "Only use webhook URL for sending messages",
+                "default": False,
+            },
+            "wecomaibot_ws_url": {
+                "type": "string",
+                "description": "WebSocket URL",
+                "default": "wss://openws.work.weixin.qq.com",
+            },
+            "wecomaibot_heartbeat_interval": {
+                "type": "int",
+                "description": "Heartbeat interval (seconds)",
+                "default": 30,
+            },
+            "unified_webhook_mode": {
+                "type": "bool",
+                "description": "Use unified webhook mode",
+                "default": True,
+            },
+            "webhook_uuid": {
+                "type": "string",
+                "description": "Webhook UUID for unified mode",
+                "default": "",
+            },
+            "port": {
+                "type": "int",
+                "description": "Callback server port",
+                "default": 6198,
+            },
+        },
+        "weixin_official_account": {
+            "appid": {
+                "type": "string",
+                "description": "WeChat Official Account AppID",
+                "required": True,
+            },
+            "secret": {
+                "type": "string",
+                "description": "WeChat Official Account AppSecret",
+                "required": True,
+            },
+            "token": {
+                "type": "string",
+                "description": "Token for callback verification",
+                "default": "",
+            },
+            "encoding_aes_key": {
+                "type": "string",
+                "description": "Encoding AES Key for message encryption",
+                "default": "",
+            },
+            "api_base_url": {
+                "type": "string",
+                "description": "WeChat API base URL",
+                "default": "https://api.weixin.qq.com/cgi-bin/",
+            },
+            "unified_webhook_mode": {
+                "type": "bool",
+                "description": "Use unified webhook mode",
+                "default": True,
+            },
+            "webhook_uuid": {
+                "type": "string",
+                "description": "Webhook UUID for unified mode",
+                "default": "",
+            },
+            "callback_server_host": {
+                "type": "string",
+                "description": "Callback server host",
+                "default": "0.0.0.0",
+            },
+            "port": {
+                "type": "int",
+                "description": "Callback server port",
+                "default": 6194,
+            },
+            "active_send_mode": {
+                "type": "bool",
+                "description": "Enable active message sending mode",
+                "default": False,
+            },
+        },
+        "mattermost": {
+            "mattermost_url": {
+                "type": "string",
+                "description": "Mattermost server URL",
+                "required": True,
+            },
+            "mattermost_token": {
+                "type": "string",
+                "description": "Mattermost Bot Token",
+                "required": True,
+            },
+            "mattermost_team_name": {
+                "type": "string",
+                "description": "Team name for the bot",
+                "default": "",
+            },
+        },
+        "misskey": {
+            "misskey_instance_url": {
+                "type": "string",
+                "description": "Misskey instance URL",
+                "default": "https://misskey.example",
+            },
+            "misskey_token": {
+                "type": "string",
+                "description": "Misskey API Token",
+                "required": True,
+            },
+            "misskey_default_visibility": {
+                "type": "string",
+                "description": "Default note visibility: 'public', 'home', 'followers'",
+                "default": "public",
+            },
+            "misskey_local_only": {
+                "type": "bool",
+                "description": "Post notes as local-only",
+                "default": False,
+            },
+            "misskey_enable_chat": {
+                "type": "bool",
+                "description": "Enable chat functionality",
+                "default": True,
+            },
+            "misskey_allow_insecure_downloads": {
+                "type": "bool",
+                "description": "Allow insecure HTTP downloads",
+                "default": False,
+            },
+            "misskey_download_timeout": {
+                "type": "int",
+                "description": "Download timeout (seconds)",
+                "default": 15,
+            },
+            "misskey_download_chunk_size": {
+                "type": "int",
+                "description": "Download chunk size (bytes)",
+                "default": 65536,
+            },
+            "misskey_max_download_bytes": {
+                "type": "int",
+                "description": "Maximum download size (bytes), None for unlimited",
+                "default": None,
+            },
+            "misskey_enable_file_upload": {
+                "type": "bool",
+                "description": "Enable file upload functionality",
+                "default": True,
+            },
+            "misskey_upload_concurrency": {
+                "type": "int",
+                "description": "Number of concurrent uploads",
+                "default": 3,
+            },
+            "misskey_upload_folder": {
+                "type": "string",
+                "description": "Upload folder name in Drive",
+                "default": "",
+            },
+        },
+        "matrix": {
+            "matrix_homeserver": {
+                "type": "string",
+                "description": "Matrix homeserver URL",
+                "required": True,
+            },
+            "matrix_user_id": {
+                "type": "string",
+                "description": "Matrix user ID (@user:server.com)",
+                "required": True,
+            },
+            "matrix_access_token": {
+                "type": "string",
+                "description": "Matrix access token",
+                "required": True,
+            },
+            "matrix_device_id": {
+                "type": "string",
+                "description": "Matrix device ID",
+                "default": "",
+            },
+        },
+        "qqofficial": {
+            "appid": {
+                "type": "string",
+                "description": "QQ Official App ID",
+                "required": True,
+            },
+            "secret": {
+                "type": "string",
+                "description": "QQ Official App Secret",
+                "required": True,
+            },
+            "enable_group_c2c": {
+                "type": "bool",
+                "description": "Enable group C2C messages",
+                "default": True,
+            },
+            "enable_guild_direct_message": {
+                "type": "bool",
+                "description": "Enable guild direct messages",
+                "default": True,
+            },
+        },
+        "qqofficial_webhook": {
+            "appid": {
+                "type": "string",
+                "description": "QQ Official App ID",
+                "required": True,
+            },
+            "secret": {
+                "type": "string",
+                "description": "QQ Official App Secret",
+                "required": True,
+            },
+            "is_sandbox": {
+                "type": "bool",
+                "description": "Use sandbox environment",
+                "default": False,
+            },
+            "unified_webhook_mode": {
+                "type": "bool",
+                "description": "Use unified webhook mode",
+                "default": True,
+            },
+            "webhook_uuid": {
+                "type": "string",
+                "description": "Webhook UUID for unified mode",
+                "default": "",
+            },
+            "callback_server_host": {
+                "type": "string",
+                "description": "Callback server host",
+                "default": "0.0.0.0",
+            },
+            "port": {
+                "type": "int",
+                "description": "Callback server port",
+                "default": 6196,
+            },
+        },
+        "satori": {
+            "satori_host": {
+                "type": "string",
+                "description": "Satori protocol host",
+                "default": "localhost",
+            },
+            "satori_port": {
+                "type": "int",
+                "description": "Satori protocol port",
+                "default": 8080,
+            },
+        },
+        "vocechat": {
+            "vocechat_webhook_url": {
+                "type": "string",
+                "description": "VoceChat webhook URL",
+                "required": True,
+            },
+            "vocechat_api_url": {
+                "type": "string",
+                "description": "VoceChat API URL",
+                "default": "",
+            },
+        },
+        "webchat": {},
+        "line": {
+            "channel_access_token": {
+                "type": "string",
+                "description": "LINE Channel Access Token",
+                "required": True,
+            },
+            "channel_secret": {
+                "type": "string",
+                "description": "LINE Channel Secret",
+                "required": True,
+            },
+            "unified_webhook_mode": {
+                "type": "bool",
+                "description": "Use unified webhook mode",
+                "default": True,
+            },
+            "webhook_uuid": {
+                "type": "string",
+                "description": "Webhook UUID for unified mode",
+                "default": "",
+            },
+            "line_webhook_host": {
+                "type": "string",
+                "description": "Webhook server host",
+                "default": "0.0.0.0",
+            },
+            "line_webhook_port": {
+                "type": "int",
+                "description": "Webhook server port",
+                "default": 6192,
+            },
+        },
+        "weixin_oc": {
+            "weixin_oc_base_url": {
+                "type": "string",
+                "description": "WeChat OC base URL",
+                "default": "https://ilinkai.weixin.qq.com",
+            },
+            "weixin_oc_bot_type": {
+                "type": "string",
+                "description": "Bot type identifier",
+                "default": "3",
+            },
+            "weixin_oc_qr_poll_interval": {
+                "type": "int",
+                "description": "QR code polling interval (seconds)",
+                "default": 3,
+            },
+            "weixin_oc_long_poll_timeout_ms": {
+                "type": "int",
+                "description": "Long poll timeout (milliseconds)",
+                "default": 30000,
+            },
+            "weixin_oc_api_timeout_ms": {
+                "type": "int",
+                "description": "API timeout (milliseconds)",
+                "default": 30000,
+            },
+            "weixin_oc_token": {
+                "type": "string",
+                "description": "WeChat OC token",
+                "default": "",
+            },
         },
     }
     return schemas.get(bot_type)

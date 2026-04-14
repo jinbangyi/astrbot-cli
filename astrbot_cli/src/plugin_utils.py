@@ -483,8 +483,10 @@ def get_plugin_config(name: str) -> dict:
     config_path = get_plugin_config_path(name)
     if config_path.exists():
         try:
-            return json.loads(config_path.read_text(encoding="utf-8"))
-        except json.JSONDecodeError:
+            # Use utf-8-sig to handle BOM (Byte Order Mark)
+            return json.loads(config_path.read_text(encoding="utf-8-sig"))
+        except json.JSONDecodeError as e:
+            print(f"Warning: Invalid JSON in config file {config_path}: {e}")
             return {}
     return {}
 
@@ -500,6 +502,7 @@ def set_plugin_config(name: str, config: dict) -> None:
     config_dir = get_config_dir()
     config_dir.mkdir(parents=True, exist_ok=True)
     config_path = get_plugin_config_path(name)
+    # Use utf-8 (without BOM) for consistency
     config_path.write_text(json.dumps(config, indent=2, ensure_ascii=False), encoding="utf-8")
 
 

@@ -4,11 +4,14 @@ This module manages the AstrBot installation path, allowing users to:
 1. Install AstrBot to any directory (via --path option)
 2. Use CLI commands from any directory (reads saved path)
 3. Check and manage multiple installations
+4. Configure default API key for AstrBot API authentication
 """
 
 import json
 from pathlib import Path
 from dataclasses import dataclass
+
+import yaml
 
 
 # Default installation path
@@ -16,22 +19,26 @@ DEFAULT_INSTALL_PATH = Path.cwd() / "data" / "astrbot"
 
 # CLI config file location (stores the AstrBot path)
 # Using user's home directory for global config
-CLI_CONFIG_DIR = Path.home() / ".astrbot-cli"
-CLI_CONFIG_FILE = CLI_CONFIG_DIR / "config.json"
+CLI_CONFIG_DIR = Path.home() / ".config" / "astrbot-cli"
+CLI_CONFIG_FILE = CLI_CONFIG_DIR / "config.yaml"
 
 
 @dataclass
 class CLIConfig:
-    """CLI configuration stored in ~/.astrbot-cli/config.json"""
+    """CLI configuration stored in ~/.config/astrbot-cli/config.yaml"""
 
     astrbot_path: str | None = None  # Path to AstrBot installation
+    api_key: str | None = None  # Default API key for AstrBot API authentication
 
     def to_dict(self) -> dict:
-        return {"astrbot_path": self.astrbot_path}
+        return {"astrbot_path": self.astrbot_path, "api_key": self.api_key}
 
     @classmethod
     def from_dict(cls, data: dict) -> "CLIConfig":
-        return cls(astrbot_path=data.get("astrbot_path"))
+        return cls(
+            astrbot_path=data.get("astrbot_path"),
+            api_key=data.get("api_key")
+        )
 
 
 def ensure_config_dir() -> None:
@@ -49,9 +56,14 @@ def load_cli_config() -> CLIConfig:
         return CLIConfig()
 
     try:
-        data = json.loads(CLI_CONFIG_FILE.read_text(encoding="utf-8"))
+        content = CLI_CONFIG_FILE.read_text(encoding="utf-8")
+        # Support both YAML and JSON for backward compatibility
+        if CLI_CONFIG_FILE.suffix in (".yaml", ".yml"):
+            data = yaml.safe_load(content) or {}
+        else:
+            data = json.loads(content)
         return CLIConfig.from_dict(data)
-    except (json.JSONDecodeError, KeyError):
+    except (json.JSONDecodeError, yaml.YAMLError, KeyError):
         return CLIConfig()
 
 
@@ -62,8 +74,9 @@ def save_cli_config(config: CLIConfig) -> None:
         config: The configuration to save
     """
     ensure_config_dir()
+    # Use YAML format for better readability
     CLI_CONFIG_FILE.write_text(
-        json.dumps(config.to_dict(), indent=2),
+        yaml.dump(config.to_dict(), default_flow_style=False, allow_unicode=True),
         encoding="utf-8"
     )
 
@@ -188,3 +201,48 @@ def print_current_path() -> None:
             print("  Status: Directory exists but AstrBot not installed")
     else:
         print("  Status: Directory does not exist")
+
+    # Show API key status
+    if config.api_key:
+        print(f"\nAPI Key: configured ✓")
+    else:
+        print(f"\nAPI Key: not configured")
+
+
+def get_default_api_key() -> str | None:
+    """Get the default API key from CLI config.
+
+    Returns:
+        str | None: The API key if configured, None otherwise
+    """
+    config = load_cli_config()
+    return config.api_key
+
+
+def set_api_key(api_key: str) -> None:
+    """Set the default API key in CLI config.
+
+    Args:
+        api_key: The API key to save
+    """
+    config = load_cli_config()
+    config.api_key = api_key
+    save_cli_config(config)
+
+
+def resolve_api_key(provided_key: str | None) -> str | None:
+    """Resolve the API key to use, with fallback to config.
+
+    Priority:
+    1. Explicitly provided key
+    2. Key from CLI config
+
+    Args:
+        provided_key: API key passed to the command
+
+    Returns:
+        str | None: The resolved API key, or None if not available
+    """
+    if provided_key:
+        return provided_key
+    return get_default_api_key()

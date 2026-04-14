@@ -94,6 +94,8 @@ The CLI provides two complementary execution models:
 
 ## Important Notes
 
+1. **Follow the file organization rules** outlined in `docs/rules/project.md` for all new files and documentation.
 2. **Always check `docs/development/`** for current plans before implementing
 3. **Date-based file organization** for all new documentation
 4. **TODO.md is for unfinished tasks only** - remove completed items
+5. each py file should within 800 lines, if the file is too long, consider refactor it into multiple files and modules

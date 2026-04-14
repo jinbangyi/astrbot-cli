@@ -208,6 +208,16 @@ class Config:
             key, value = self.set.split("=", 1)
             keys = key.split(".")
 
+            # Validate key against plugin config schema if available
+            if schema:
+                # Extract top-level keys from schema
+                valid_fields = set(schema.keys())
+                top_key = keys[0]
+                if top_key not in valid_fields:
+                    print(f"Error: '{top_key}' is not a valid field for plugin '{self.name}'")
+                    print(f"Valid fields: {', '.join(sorted(valid_fields))}")
+                    return
+
             # Navigate to the right nested dict
             current = config
             for k in keys[:-1]:

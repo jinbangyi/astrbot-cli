@@ -13,6 +13,7 @@ from .providers_utils import (
     get_available_providers,
     get_provider_config,
     get_provider_config_schema,
+    get_provider_defaults,
     set_provider_config,
     list_provider_configs,
     add_provider_config,
@@ -178,6 +179,21 @@ class Config:
 
             key, value = self.set.split("=", 1)
             keys = key.split(".")
+
+            # Validate key against provider defaults (valid fields for this provider type)
+            provider_type = config.get("provider", "")
+            valid_fields = get_provider_defaults(provider_type) or {}
+            # Also allow id, provider, enable
+            valid_fields["id"] = None
+            valid_fields["provider"] = None
+            valid_fields["enable"] = None
+
+            # Check if top-level key is valid
+            top_key = keys[0]
+            if top_key not in valid_fields:
+                print(f"Error: '{top_key}' is not a valid field for provider type '{provider_type}'")
+                print(f"Valid fields: {', '.join(sorted(valid_fields.keys()))}")
+                return
 
             # Navigate to the right nested dict
             current = config
